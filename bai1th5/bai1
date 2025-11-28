@@ -1,0 +1,92 @@
+#include <sfr51.inc>
+
+; dinh nghia chan P3.0 lam chan xuat PWM
+PWM_PIN BIT P3.0                 
+
+; dia chi khoi dong chuong trinh
+ORG 0000H
+LJMP MAIN
+
+; vector ngat Timer 0
+ORG 000BH
+LJMP TIMER_0_INTERRUPT
+
+ORG 0030H
+
+MAIN:
+    ; cau hinh Timer0 o che do mode 0 (13-bit)
+    MOV TMOD,#00000000B  
+
+    ; xoa toan bo thanh ghi TCON
+    MOV TCON,#00H        
+
+    ; bat Timer0 (TR0 = 1)
+    SETB TCON.4          
+
+    ; IE = 10000010
+    ; EA = 1 cho phep ngat toan cuc
+    ; ET0 = 1 cho phep ngat Timer0
+    MOV IE,#10000010B    
+
+    ; dat uu tien cao cho Timer0
+    MOV IP,#00000010B    
+
+    ; R7 la gia tri quyet dinh do rong xung PWM
+    ; duty cycle = R7 / 255
+    MOV R7, #200
+
+HERE:
+    ; vong lap vo han, chuong trinh chinh khong lam gi
+    LJMP HERE
+
+
+;=================================
+; ROUTINE NGAT TIMER 0 TAO PWM
+;=================================
+TIMER_0_INTERRUPT:
+
+    ; kiem tra co F0
+    ; neu F0 = 1 thi dang o muc HIGH
+    JB F0, HIGH_DONE      
+
+LOW_DONE:
+    ; dang o muc LOW, chuyen sang HIGH
+
+    ; set co F0 = 1
+    SETB F0
+
+    ; dua chan PWM len muc cao
+    SETB PWM_PIN
+
+    ; nap thoi gian muc cao bang R7
+    MOV TH0, R7
+
+    ; xoa co tran Timer0
+    CLR TF0
+
+    RETI
+
+
+HIGH_DONE:
+    ; dang o muc HIGH, chuyen sang LOW
+
+    ; xoa co F0
+    CLR F0
+
+    ; dua chan PWM xuong muc thap
+    CLR PWM_PIN
+
+    ; tinh thoi gian muc thap = 255 - R7
+    MOV A,#0FFH
+    CLR C
+    SUBB A, R7
+
+    ; nap thoi gian cho muc thap
+    MOV TH0, A
+
+    ; xoa co tran Timer0
+    CLR TF0
+
+    RETI
+
+END
