@@ -1,0 +1,50 @@
+;========= CAU A ¨C LED CHAY P1.0 -> P1.7 ¨C TIMER0 1S =========
+#include <sfr51.inc>
+
+ORG 0000H
+    SJMP MAIN
+
+ORG 000BH              ; Vector ngat Timer0
+    SJMP T0_ISR
+
+;------------------------
+MAIN:
+    MOV TMOD,#01H      ; Timer0 mode 1 (16-bit)
+    MOV TH0,#3CH       ; Nap gia tri tao 50ms
+    MOV TL0,#0B0H
+    MOV IE,#82H        ; EA=1, ET0=1
+    SETB TR0           ; Chay Timer0
+
+    SETB P3.2          ; P3.2 la input
+    MOV P1,#00H        ; Chua bam -> tat het LED
+    MOV A,#01H         ; Bat dau tu P1.0
+    MOV R7,#20         ; 20 x 50ms = 1s
+
+HERE:
+    SJMP HERE
+
+;------------------------
+T0_ISR:
+    MOV TH0,#3CH       ; Nap lai Timer0
+    MOV TL0,#0B0H
+
+    JB P3.2,NO_PRESS   ; Neu chua bam phim
+
+    DJNZ R7,EXIT_ISR  ; Dem du 1s chua
+    MOV R7,#20         ; Du 1s
+
+    MOV P1,A           ; Xuat LED
+    RL A
+    JNZ EXIT_ISR
+    MOV A,#01H         ; Het P1.7 quay ve P1.0
+    SJMP EXIT_ISR
+
+NO_PRESS:
+    MOV P1,#00H        ; Khong bam -> tat LED
+    MOV A,#01H
+    MOV R7,#20
+
+EXIT_ISR:
+    RETI
+
+END
